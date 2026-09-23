@@ -221,7 +221,7 @@ done
 cat > "$CLIENT_DIR/show-clients.sh" <<'EOF_SHOW'
 #!/usr/bin/env bash
 set -Eeuo pipefail
-DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_PATH="$(readlink -f "$0")"\nDIR="$(dirname "$SCRIPT_PATH")"
 
 cat "$DIR/links.txt"
 
