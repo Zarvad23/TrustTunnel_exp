@@ -146,7 +146,7 @@ echo [INFO] Checking the endpoint TCP port from the generated config...
 set "TT_CONFIG_FILE=%CONFIG_FILE%"
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$line = Get-Content -LiteralPath $env:TT_CONFIG_FILE ^| Where-Object { $_ -match '^\s*addresses\s*=' } ^| Select-Object -First 1; " ^
+  "$line = Get-Content -LiteralPath $env:TT_CONFIG_FILE | Where-Object { $_ -match '^\s*addresses\s*=' } | Select-Object -First 1; " ^
   "if (-not $line) { Write-Host '[WARN] Could not read endpoint address from config.'; exit 2 }; " ^
   "if ($line -notmatch '"([^"]+)"') { Write-Host '[WARN] Could not parse endpoint address.'; exit 2 }; " ^
   "$ep = $matches[1]; " ^
