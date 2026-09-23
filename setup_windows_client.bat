@@ -146,11 +146,254 @@ echo [INFO] Checking the endpoint TCP port from the generated config...
 set "TT_CONFIG_FILE=%CONFIG_FILE%"
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$line = Get-Content -LiteralPath $env:TT_CONFIG_FILE | Where-Object { $_ -match '^\\s*addresses\\s*=' } | Select-Object -First 1; " ^
+  "$line = Get-Content -LiteralPath $env:TT_CONFIG_FILE | Where-Object { $_ -match '^\s*addresses\s*=' } | Select-Object -First 1; " ^
   "if (-not $line) { Write-Host '[WARN] Could not read endpoint address from config.'; exit 2 }; " ^
   "$parts = $line.Split([char]34); if ($parts.Count -lt 2) { Write-Host '[WARN] Could not parse endpoint address.'; exit 2 }; " ^
   "$ep = $parts[1]; " ^
-  "if ($ep -match '^\\[(.+)\\]:(\\d+)$') { $h=$matches[1]; $p=[int]$matches[2] } elseif ($ep -match '^(.+):(\\d+)$') { $h=$matches[1]; $p=[int]$matches[2] } else { Write-Host ('[WARN] Unknown endpoint format: ' + $ep); exit 2 }; " ^
+  "if ($ep -match '^\[(.+)\]:(\d+)) { $h=$matches[1]; $p=[int]$matches[2] } elseif ($ep -match '^(.+):(\d+)) { $h=$matches[1]; $p=[int]$matches[2] } else { Write-Host ('[WARN] Unknown endpoint format: ' + $ep); exit 2 }; " ^
+  "Write-Host ('[INFO] Testing ' + $h + ':' + $p + ' ...'); " ^
+  "$r = Test-NetConnection -ComputerName $h -Port $p -WarningAction SilentlyContinue; " ^
+  "if ($r.TcpTestSucceeded) { Write-Host '[OK] Endpoint TCP port is reachable.'; exit 0 } else { Write-Host '[ERROR] Endpoint TCP port is not reachable.'; exit 1 }"
+
+set "NET_RC=%ERRORLEVEL%"
+if "%NET_RC%"=="1" (
+    echo.
+    echo [ERROR] Server connectivity check failed.
+    echo         The config was created, but the server cannot be reached over TCP.
+    goto FAILED
+)
+if "%NET_RC%"=="2" (
+    echo [WARN] Endpoint address could not be parsed automatically.
+    echo        The setup will continue because the official wizard accepted the tt:// link.
+)
+
+set "START_BAT=%CLIENT_DIR%\START_TrustTunnel.bat"
+
+> "%START_BAT%" echo @echo off
+>> "%START_BAT%" echo setlocal EnableExtensions
+>> "%START_BAT%" echo title TrustTunnel Client
+>> "%START_BAT%" echo cd /d "%%~dp0"
+>> "%START_BAT%" echo.
+>> "%START_BAT%" echo fltmc ^>nul 2^>^&1
+>> "%START_BAT%" echo if errorlevel 1 ^(
+>> "%START_BAT%" echo     echo Requesting Administrator privileges...
+>> "%START_BAT%" echo     powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%%~f0' -Verb RunAs"
+>> "%START_BAT%" echo     exit /b
+>> "%START_BAT%" echo ^)
+>> "%START_BAT%" echo.
+>> "%START_BAT%" echo echo ============================================================
+>> "%START_BAT%" echo echo   TrustTunnel Client
+>> "%START_BAT%" echo echo ============================================================
+>> "%START_BAT%" echo echo.
+>> "%START_BAT%" echo echo TrustTunnel is running.
+>> "%START_BAT%" echo echo Close this window or press Ctrl+C to stop it.
+>> "%START_BAT%" echo echo.
+>> "%START_BAT%" echo trusttunnel_client.exe --config "trusttunnel_client.toml"
+>> "%START_BAT%" echo set "RC=%%ERRORLEVEL%%"
+>> "%START_BAT%" echo echo.
+>> "%START_BAT%" echo echo TrustTunnel stopped. Exit code: %%RC%%
+>> "%START_BAT%" echo pause
+
+if not exist "%START_BAT%" (
+    echo [ERROR] Failed to create START_TrustTunnel.bat.
+    goto FAILED
+)
+
+echo.
+echo ============================================================
+echo   SETUP COMPLETE
+echo ============================================================
+echo.
+echo [OK] Client folder:
+echo      %CLIENT_DIR%
+echo.
+echo [OK] Config:
+echo      %CONFIG_FILE%
+echo.
+echo [OK] Launcher:
+echo      %START_BAT%
+echo.
+echo Run START_TrustTunnel.bat whenever you want to connect.
+echo It will request Administrator privileges automatically.
+echo The console will stay open while TrustTunnel is running.
+echo Closing it or pressing Ctrl+C stops the client.
+echo.
+pause
+exit /b 0
+
+:FAILED
+echo.
+echo ============================================================
+echo   SETUP FAILED
+echo ============================================================
+echo.
+echo Fix the error shown above and run this BAT again.
+echo.
+pause
+exit /b 1
+) { $h=$matches[1]; $p=[int]$matches[2] } elseif ($ep -match '^(.+):(\\d+)$') { $h=$matches[1]; $p=[int]$matches[2] } else { Write-Host ('[WARN] Unknown endpoint format: ' + $ep); exit 2 }; " ^
+  "Write-Host ('[INFO] Testing ' + $h + ':' + $p + ' ...'); " ^
+  "$r = Test-NetConnection -ComputerName $h -Port $p -WarningAction SilentlyContinue; " ^
+  "if ($r.TcpTestSucceeded) { Write-Host '[OK] Endpoint TCP port is reachable.'; exit 0 } else { Write-Host '[ERROR] Endpoint TCP port is not reachable.'; exit 1 }"
+
+set "NET_RC=%ERRORLEVEL%"
+if "%NET_RC%"=="1" (
+    echo.
+    echo [ERROR] Server connectivity check failed.
+    echo         The config was created, but the server cannot be reached over TCP.
+    goto FAILED
+)
+if "%NET_RC%"=="2" (
+    echo [WARN] Endpoint address could not be parsed automatically.
+    echo        The setup will continue because the official wizard accepted the tt:// link.
+)
+
+set "START_BAT=%CLIENT_DIR%\START_TrustTunnel.bat"
+
+> "%START_BAT%" echo @echo off
+>> "%START_BAT%" echo setlocal EnableExtensions
+>> "%START_BAT%" echo title TrustTunnel Client
+>> "%START_BAT%" echo cd /d "%%~dp0"
+>> "%START_BAT%" echo.
+>> "%START_BAT%" echo fltmc ^>nul 2^>^&1
+>> "%START_BAT%" echo if errorlevel 1 ^(
+>> "%START_BAT%" echo     echo Requesting Administrator privileges...
+>> "%START_BAT%" echo     powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%%~f0' -Verb RunAs"
+>> "%START_BAT%" echo     exit /b
+>> "%START_BAT%" echo ^)
+>> "%START_BAT%" echo.
+>> "%START_BAT%" echo echo ============================================================
+>> "%START_BAT%" echo echo   TrustTunnel Client
+>> "%START_BAT%" echo echo ============================================================
+>> "%START_BAT%" echo echo.
+>> "%START_BAT%" echo echo TrustTunnel is running.
+>> "%START_BAT%" echo echo Close this window or press Ctrl+C to stop it.
+>> "%START_BAT%" echo echo.
+>> "%START_BAT%" echo trusttunnel_client.exe --config "trusttunnel_client.toml"
+>> "%START_BAT%" echo set "RC=%%ERRORLEVEL%%"
+>> "%START_BAT%" echo echo.
+>> "%START_BAT%" echo echo TrustTunnel stopped. Exit code: %%RC%%
+>> "%START_BAT%" echo pause
+
+if not exist "%START_BAT%" (
+    echo [ERROR] Failed to create START_TrustTunnel.bat.
+    goto FAILED
+)
+
+echo.
+echo ============================================================
+echo   SETUP COMPLETE
+echo ============================================================
+echo.
+echo [OK] Client folder:
+echo      %CLIENT_DIR%
+echo.
+echo [OK] Config:
+echo      %CONFIG_FILE%
+echo.
+echo [OK] Launcher:
+echo      %START_BAT%
+echo.
+echo Run START_TrustTunnel.bat whenever you want to connect.
+echo It will request Administrator privileges automatically.
+echo The console will stay open while TrustTunnel is running.
+echo Closing it or pressing Ctrl+C stops the client.
+echo.
+pause
+exit /b 0
+
+:FAILED
+echo.
+echo ============================================================
+echo   SETUP FAILED
+echo ============================================================
+echo.
+echo Fix the error shown above and run this BAT again.
+echo.
+pause
+exit /b 1
+) { $h=$matches[1]; $p=[int]$matches[2] } else { Write-Host ('[WARN] Unknown endpoint format: ' + $ep); exit 2 }; " ^
+  "Write-Host ('[INFO] Testing ' + $h + ':' + $p + ' ...'); " ^
+  "$r = Test-NetConnection -ComputerName $h -Port $p -WarningAction SilentlyContinue; " ^
+  "if ($r.TcpTestSucceeded) { Write-Host '[OK] Endpoint TCP port is reachable.'; exit 0 } else { Write-Host '[ERROR] Endpoint TCP port is not reachable.'; exit 1 }"
+
+set "NET_RC=%ERRORLEVEL%"
+if "%NET_RC%"=="1" (
+    echo.
+    echo [ERROR] Server connectivity check failed.
+    echo         The config was created, but the server cannot be reached over TCP.
+    goto FAILED
+)
+if "%NET_RC%"=="2" (
+    echo [WARN] Endpoint address could not be parsed automatically.
+    echo        The setup will continue because the official wizard accepted the tt:// link.
+)
+
+set "START_BAT=%CLIENT_DIR%\START_TrustTunnel.bat"
+
+> "%START_BAT%" echo @echo off
+>> "%START_BAT%" echo setlocal EnableExtensions
+>> "%START_BAT%" echo title TrustTunnel Client
+>> "%START_BAT%" echo cd /d "%%~dp0"
+>> "%START_BAT%" echo.
+>> "%START_BAT%" echo fltmc ^>nul 2^>^&1
+>> "%START_BAT%" echo if errorlevel 1 ^(
+>> "%START_BAT%" echo     echo Requesting Administrator privileges...
+>> "%START_BAT%" echo     powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%%~f0' -Verb RunAs"
+>> "%START_BAT%" echo     exit /b
+>> "%START_BAT%" echo ^)
+>> "%START_BAT%" echo.
+>> "%START_BAT%" echo echo ============================================================
+>> "%START_BAT%" echo echo   TrustTunnel Client
+>> "%START_BAT%" echo echo ============================================================
+>> "%START_BAT%" echo echo.
+>> "%START_BAT%" echo echo TrustTunnel is running.
+>> "%START_BAT%" echo echo Close this window or press Ctrl+C to stop it.
+>> "%START_BAT%" echo echo.
+>> "%START_BAT%" echo trusttunnel_client.exe --config "trusttunnel_client.toml"
+>> "%START_BAT%" echo set "RC=%%ERRORLEVEL%%"
+>> "%START_BAT%" echo echo.
+>> "%START_BAT%" echo echo TrustTunnel stopped. Exit code: %%RC%%
+>> "%START_BAT%" echo pause
+
+if not exist "%START_BAT%" (
+    echo [ERROR] Failed to create START_TrustTunnel.bat.
+    goto FAILED
+)
+
+echo.
+echo ============================================================
+echo   SETUP COMPLETE
+echo ============================================================
+echo.
+echo [OK] Client folder:
+echo      %CLIENT_DIR%
+echo.
+echo [OK] Config:
+echo      %CONFIG_FILE%
+echo.
+echo [OK] Launcher:
+echo      %START_BAT%
+echo.
+echo Run START_TrustTunnel.bat whenever you want to connect.
+echo It will request Administrator privileges automatically.
+echo The console will stay open while TrustTunnel is running.
+echo Closing it or pressing Ctrl+C stops the client.
+echo.
+pause
+exit /b 0
+
+:FAILED
+echo.
+echo ============================================================
+echo   SETUP FAILED
+echo ============================================================
+echo.
+echo Fix the error shown above and run this BAT again.
+echo.
+pause
+exit /b 1
+) { $h=$matches[1]; $p=[int]$matches[2] } elseif ($ep -match '^(.+):(\\d+)$') { $h=$matches[1]; $p=[int]$matches[2] } else { Write-Host ('[WARN] Unknown endpoint format: ' + $ep); exit 2 }; " ^
   "Write-Host ('[INFO] Testing ' + $h + ':' + $p + ' ...'); " ^
   "$r = Test-NetConnection -ComputerName $h -Port $p -WarningAction SilentlyContinue; " ^
   "if ($r.TcpTestSucceeded) { Write-Host '[OK] Endpoint TCP port is reachable.'; exit 0 } else { Write-Host '[ERROR] Endpoint TCP port is not reachable.'; exit 1 }"
