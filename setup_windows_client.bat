@@ -146,11 +146,13 @@ echo [INFO] Checking the endpoint TCP port from the generated config...
 set "TT_CONFIG_FILE=%CONFIG_FILE%"
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$line = Get-Content -LiteralPath $env:TT_CONFIG_FILE | Where-Object { $_ -match '^\s*addresses\s*=' } | Select-Object -First 1; " ^
+  "$line = Get-Content -LiteralPath $env:TT_CONFIG_FILE | Where-Object { $_.TrimStart().StartsWith('addresses') } | Select-Object -First 1; " ^
   "if (-not $line) { Write-Host '[WARN] Could not read endpoint address from config.'; exit 2 }; " ^
   "$parts = $line.Split([char]34); if ($parts.Count -lt 2) { Write-Host '[WARN] Could not parse endpoint address.'; exit 2 }; " ^
-  "$ep = $parts[1]; " ^
-  "if ($ep -match '^\[(.+)\]:(\d+)) { $h=$matches[1]; $p=[int]$matches[2] } elseif ($ep -match '^(.+):(\d+)) { $h=$matches[1]; $p=[int]$matches[2] } else { Write-Host ('[WARN] Unknown endpoint format: ' + $ep); exit 2 }; " ^
+  "$ep = $parts[1]; $idx = $ep.LastIndexOf(':'); " ^
+  "if ($idx -le 0) { Write-Host ('[WARN] Unknown endpoint format: ' + $ep); exit 2 }; " ^
+  "$h = $ep.Substring(0,$idx).Trim('[',']'); $pText = $ep.Substring($idx+1); " ^
+  "$p = 0; if (-not [int]::TryParse($pText,[ref]$p)) { Write-Host ('[WARN] Invalid endpoint port: ' + $pText); exit 2 }; " ^
   "Write-Host ('[INFO] Testing ' + $h + ':' + $p + ' ...'); " ^
   "$r = Test-NetConnection -ComputerName $h -Port $p -WarningAction SilentlyContinue; " ^
   "if ($r.TcpTestSucceeded) { Write-Host '[OK] Endpoint TCP port is reachable.'; exit 0 } else { Write-Host '[ERROR] Endpoint TCP port is not reachable.'; exit 1 }"
