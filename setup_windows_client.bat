@@ -63,11 +63,18 @@ if exist "%CLIENT_DIR%\wintun.dll" (
     )
 )
 
-for /f "usebackq delims=" %%V in (`"%CLIENT_DIR%\trusttunnel_client.exe" --version 2^^^>^&1`) do set "CLIENT_VERSION=%%V"
-if not defined CLIENT_VERSION (
+set "CLIENT_VERSION_FILE=%TEMP%\trusttunnel_client_version_%RANDOM%.txt"
+"%CLIENT_DIR%\trusttunnel_client.exe" --version > "%CLIENT_VERSION_FILE%" 2>&1
+if errorlevel 1 (
+    type "%CLIENT_VERSION_FILE%" 2>nul
+    del /q "%CLIENT_VERSION_FILE%" 2>nul
     echo [ERROR] trusttunnel_client.exe could not be started.
     goto FAILED
 )
+set "CLIENT_VERSION="
+set /p "CLIENT_VERSION="<"%CLIENT_VERSION_FILE%"
+del /q "%CLIENT_VERSION_FILE%" 2>nul
+if not defined CLIENT_VERSION set "CLIENT_VERSION=trusttunnel_client.exe"
 echo [OK] %CLIENT_VERSION%
 
 "%CLIENT_DIR%\setup_wizard.exe" --help 2>&1 | findstr /I /C:"--deeplink" >nul
