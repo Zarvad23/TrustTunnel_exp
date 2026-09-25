@@ -14,7 +14,8 @@ TT_DIR="/opt/trusttunnel"
 CLIENT_DIR="/root/trusttunnel-clients"
 TT_VERSION="${TT_VERSION:-1.1.0}"
 TT_HOSTNAME="${TT_HOSTNAME:-vpn.endpoint}"
-LISTEN_ADDR="0.0.0.0:443"
+TT_PORT="${TT_PORT:-8443}"
+LISTEN_ADDR="0.0.0.0:${TT_PORT}"
 CLIENTS=("Vadim_PC" "Vadim_laptop" "Vadim_phone")
 
 C_RESET='\033[0m'
@@ -160,10 +161,10 @@ SSH_PORT="$(sshd -T 2>/dev/null | awk '$1=="port" {print $2; exit}' || true)"
 SSH_PORT="${SSH_PORT:-22}"
 
 ufw allow "${SSH_PORT}/tcp" >/dev/null
-ufw allow 443/tcp >/dev/null
-ufw allow 443/udp >/dev/null
+ufw allow "${TT_PORT}/tcp" >/dev/null
+ufw allow "${TT_PORT}/udp" >/dev/null
 ufw --force enable >/dev/null
-ok "UFW enabled: SSH/${SSH_PORT}, 443/TCP and 443/UDP are allowed."
+ok "UFW enabled: SSH/${SSH_PORT}, ${TT_PORT}/TCP and ${TT_PORT}/UDP are allowed."
 
 step "9/10 - Exporting deep links and QR codes"
 LINKS_FILE="$CLIENT_DIR/links.txt"
@@ -176,7 +177,7 @@ ACTUAL_VERSION="$("$TT_DIR/trusttunnel_endpoint" --version 2>/dev/null | head -n
     echo "============================================================"
     echo "TrustTunnel client profiles"
     echo "============================================================"
-    echo "Server: $PUBLIC_IP:443"
+    echo "Server: $PUBLIC_IP:$TT_PORT"
     echo "Hostname/SNI: $TT_HOSTNAME"
     echo "Version: ${ACTUAL_VERSION:-$TT_VERSION}"
     echo "Generated: $(date -Is)"
@@ -188,7 +189,7 @@ ACTUAL_VERSION="$("$TT_DIR/trusttunnel_endpoint" --version 2>/dev/null | head -n
 for CLIENT in "${CLIENTS[@]}"; do
     LINK="$(cd "$TT_DIR" && ./trusttunnel_endpoint vpn.toml hosts.toml \
         --client_config "$CLIENT" \
-        --address "$PUBLIC_IP:443" \
+        --address "$PUBLIC_IP:$TT_PORT" \
         --name "TrustTunnel - $CLIENT")"
 
     [[ "$LINK" == tt://\?* ]] || die "Could not generate tt:// link for $CLIENT."
@@ -221,7 +222,8 @@ done
 cat > "$CLIENT_DIR/show-clients.sh" <<'EOF_SHOW'
 #!/usr/bin/env bash
 set -Eeuo pipefail
-SCRIPT_PATH="$(readlink -f "$0")"\nDIR="$(dirname "$SCRIPT_PATH")"
+SCRIPT_PATH="$(readlink -f "$0")"
+DIR="$(dirname "$SCRIPT_PATH")"
 
 cat "$DIR/links.txt"
 
@@ -239,14 +241,14 @@ step "10/10 - Final verification"
 systemctl is-enabled --quiet trusttunnel || die "trusttunnel.service is not enabled."
 systemctl is-active --quiet trusttunnel || die "trusttunnel.service is not active."
 
-if ! ss -lnt | awk '$4 ~ /:443$/ {found=1} END{exit !found}'; then
-    die "Nothing is listening on TCP port 443."
+if ! ss -lnt | awk -v port=":${TT_PORT}" '$4 ~ (port "$") {found=1} END{exit !found}'; then
+    die "Nothing is listening on TCP port ${TT_PORT}."
 fi
-if ! ss -lnu | awk '$4 ~ /:443$/ {found=1} END{exit !found}'; then
-    die "Nothing is listening on UDP port 443."
+if ! ss -lnu | awk -v port=":${TT_PORT}" '$4 ~ (port "$") {found=1} END{exit !found}'; then
+    die "Nothing is listening on UDP port ${TT_PORT}."
 fi
 
-ok "TCP/443 and UDP/443 are listening."
+ok "TCP/${TT_PORT} and UDP/${TT_PORT} are listening."
 ok "Installation completed successfully."
 
 printf "\n%b============================================================%b\n" "$C_GREEN" "$C_RESET"
