@@ -15,11 +15,11 @@
    - `Vadim_laptop`
    - `Vadim_phone`
 8. Автозапуск через `systemd`.
-9. UFW: текущий SSH-порт + `443/tcp` + `443/udp`.
-10. Проверка TCP/UDP 443.
+9. UFW: текущий SSH-порт + `8443/tcp` + `8443/udp`.
+10. Проверка TCP/UDP 8443.
 11. Генерация отдельных `tt://?` deep-link и QR-кодов для всех трёх устройств.
 
-По умолчанию используется TrustTunnel **v1.1.0** — стабильная версия, под которую подготовлен этот bootstrap.
+По умолчанию используется TrustTunnel **v1.1.0** и порт **8443/TCP+UDP**. Порт выбран как рабочий вариант для сетей, где TrustTunnel-трафик на 443 может не проходить. При необходимости порт можно переопределить переменной `TT_PORT`.
 
 ## Запуск на чистом сервере
 
@@ -86,7 +86,7 @@ sudo cat /root/trusttunnel-clients/links.txt
 
 ```bash
 systemctl status trusttunnel --no-pager
-ss -lntup | grep ':443'
+ss -lntup | grep ':8443'
 sudo ufw status
 ```
 
@@ -102,4 +102,13 @@ sudo ufw status
 
 ```bash
 reboot
+```
+
+
+## Другой порт
+
+По умолчанию используется `8443`. При необходимости можно указать другой порт без редактирования скрипта:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Zarvad23/TrustTunnel_exp/main/install.sh | sudo TT_PORT=9443 bash
 ```
